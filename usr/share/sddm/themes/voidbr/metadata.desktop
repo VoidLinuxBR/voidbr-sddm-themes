@@ -1,0 +1,16 @@
+[SddmGreeterTheme]
+Name=voidbr
+Description=A modern nerd-font based SDDM theme
+Author=minMelody
+Copyright=Copyright (C) 2025 minMelody
+License=GPLv3
+Type=sddm-theme
+Version=1.5
+Website=https://github.com/voidlinuxbr/voidbr-sddm-themes
+Screenshot=preview.png
+MainScript=Main.qml
+ConfigFile=theme.conf
+TranslationsDirectory=translations
+Theme-Id=voidbr
+Theme-API=2.15
+QtVersion=6
