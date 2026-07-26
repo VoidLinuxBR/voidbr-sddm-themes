@@ -19,7 +19,13 @@ depends=(
 	qt5-wayland
 	qt6-wayland
 )
-backup=/etc/sddm.conf
+backup=(
+	/etc/sddm.conf
+	/etc/sddm.conf.d/00-autologin
+	/etc/sddm.conf.d/cursor.conf
+	/etc/sddm.conf.d/numlock.conf
+	/etc/sddm.conf.d/wayland.conf
+)
 
 package() {
 	local dirs=("usr" "etc" "opt")
