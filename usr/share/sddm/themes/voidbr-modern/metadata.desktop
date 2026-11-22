@@ -1,0 +1,15 @@
+[SddmGreeterTheme]
+Name=VoidBR Modern
+Description=Tema SDDM do VoidBR no estilo do Umbriel (noctalia): Qt6, navegável por teclado
+Author=Vilmar Catafesta
+Copyright=(c) 2026 Vilmar Catafesta
+License=MIT
+Type=sddm-theme
+Version=1.0
+Website=https://github.com/voidlinuxbr/voidbr-sddm-themes
+Screenshot=preview.jpg
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=voidbr-modern
+Theme-API=2.0
+QtVersion=6

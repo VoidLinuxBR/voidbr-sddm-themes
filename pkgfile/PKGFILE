@@ -18,6 +18,8 @@ depends=(
 	qt5-quickcontrols2
 	qt5-wayland
 	qt6-wayland
+	qt6-declarative    # QtQuick/QtQuick.Controls do tema voidbr-modern (greeter Qt6)
+	qt6-svg            # ícones SVG do tema voidbr-modern
 	sway               # compositor do greeter em modo Wayland (etc/sddm/sway-greeter.conf; substitui o weston)
 	adwaita-icon-theme # cursor do greeter (etc/sddm.conf.d/cursor.conf: CursorTheme=Adwaita)
 )
