@@ -14,7 +14,8 @@ Rectangle {
     height: 50 * Global.scaleFactor
     color: 'transparent'
     radius: Global.inputBorderRadius
-    border.width: 2 * Global.scaleFactor
+    // borda mais grossa quando o campo de senha está com o foco
+    border.width: (passwordField.activeFocus ? 3 : 2) * Global.scaleFactor
     border.color: errorMessage.text !== "" ? Global.mError : Global.mPrimary
 
     // Cache users
@@ -65,6 +66,8 @@ Rectangle {
             font.bold: true
             font.letterSpacing: 5 * Global.scaleFactor
             focus: true
+            // sem isso o Tab sai do campo de senha e nunca mais volta
+            activeFocusOnTab: true
             text: ""
             onAccepted: sddm.login(cachedUsers[userIndex].name, passwordField.text, Global.currentSessionIndex)
             Layout.fillWidth: true
@@ -85,7 +88,7 @@ Rectangle {
             textColor: Global.mSurface
             borderRadius: Math.max(root.radius - row.anchorMargins, 0)
             Layout.fillHeight: true
-            Layout.preferredWidth: iconButton.hovered ? 100 * Global.scaleFactor : root.height - (2 * row.anchorMargins)
+            Layout.preferredWidth: iconButton.lit ? 100 * Global.scaleFactor : root.height - (2 * row.anchorMargins)
             onClicked: () => {
                 sddm.login(cachedUsers[userIndex].name, passwordField.text, Global.currentSessionIndex);
             }

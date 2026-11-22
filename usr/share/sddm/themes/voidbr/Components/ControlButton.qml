@@ -10,10 +10,16 @@ Button {
     property color textColor: Global.mOnSurface
     property string utf8Icon: "\uf011"
     property color baseColor: Global.mSurfaceVariant
+    // destaque também quando o botão recebe foco pelo teclado (Tab)
+    readonly property bool lit: root.down || root.hovered || root.visualFocus
+
+    // Enter/Return ativam o botão (o Button do QtQuick.Controls só aceita Espaço)
+    Keys.onReturnPressed: root.clicked()
+    Keys.onEnterPressed: root.clicked()
 
     background: Rectangle {
         radius: Global.buttonBorderRadius
-        color: root.down || root.hovered ? root.textColor : "transparent"
+        color: root.lit ? root.textColor : "transparent"
         border.width: 1 * Global.scaleFactor
         border.color: root.textColor
     }
@@ -28,14 +34,14 @@ Button {
         Icon {
             utf8Code: root.utf8Icon
             Layout.fillHeight: true
-            color: root.down || root.hovered ? Global.mSurface : root.textColor
+            color: root.lit ? Global.mSurface : root.textColor
         }
 
         Text {
             text: root.label
             font.pixelSize: Global.fontM
             font.bold: true
-            color: root.down || root.hovered ? Global.mSurface : root.textColor
+            color: root.lit ? Global.mSurface : root.textColor
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             Layout.fillHeight: true

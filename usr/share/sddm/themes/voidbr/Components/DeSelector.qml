@@ -35,6 +35,10 @@ Controls.ComboBox {
         id: box
 
         color: "transparent"
+        // indica o foco do teclado (Tab) no seletor de sessão
+        border.width: sessionList.visualFocus ? 1 : 0
+        border.color: Global.mTertiary
+        radius: Global.buttonBorderRadius
         clip: true
     }
 

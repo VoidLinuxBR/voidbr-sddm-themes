@@ -47,13 +47,13 @@ Item {
             height: 32 * Global.scaleFactor
 
             background: Rectangle {
-                color: upBtn.hovered || upBtn.active ? Global.mPrimary : Global.mSurface
+                color: upBtn.hovered || upBtn.visualFocus ? Global.mPrimary : Global.mSurface
                 radius: upBtn.height / 2
             }
 
             contentItem: Icon {
                 utf8Code: "\udb80\udd3f"
-                color: upBtn.hovered || upBtn.active ? Global.mSurface : Global.mPrimary
+                color: upBtn.hovered || upBtn.visualFocus ? Global.mSurface : Global.mPrimary
                 fontSize: 24 * Global.scaleFactor
             }
 
@@ -83,7 +83,7 @@ Item {
             }
 
             background: Rectangle {
-                color: downBtn.hovered || downBtn.active ? Global.mPrimary : Global.mSurface
+                color: downBtn.hovered || downBtn.visualFocus ? Global.mPrimary : Global.mSurface
                 radius: downBtn.height / 2
             }
 
