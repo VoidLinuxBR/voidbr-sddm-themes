@@ -1,8 +1,10 @@
 // VoidBR Modern — tema do greeter SDDM (Qt6)
 // Visual no estilo do greeter do Umbriel (noctalia): fundo com véu escuro,
 // relógio à esquerda, cartão de login à direita, energia no canto.
-// Feito para teclado: Tab percorre senha → entrar → sessão → usuário →
-// energia; Enter entra (no campo de senha) ou ativa o botão focado.
+// Feito para teclado: o foco começa na senha; Tab percorre senha → sessão →
+// usuário → entrar → suspender → reiniciar → desligar → senha (KeyNavigation;
+// itens ocultos ou desabilitados são pulados); Shift+Tab faz o inverso.
+// Enter entra (no campo de senha) ou ativa o botão focado.
 import QtQuick
 import QtQuick.Controls.Basic
 import "components"
@@ -222,112 +224,6 @@ Item {
                 }
             }
 
-            // senha + entrar
-            Column {
-                width: parent.width
-                spacing: 10 * root.s
-
-                Text {
-                    text: "Senha"
-                    color: root.muted
-                    font { family: root.fontFamily; pixelSize: 13 * root.s }
-                }
-
-                Row {
-                    width: parent.width
-                    spacing: 8 * root.s
-
-                    TextField {
-                        id: password
-                        width: parent.width - loginButton.width - parent.spacing
-                        height: 48 * root.s
-                        focus: true
-                        activeFocusOnTab: true
-                        echoMode: TextInput.Password
-                        passwordCharacter: "•"
-                        color: root.onSurface
-                        selectionColor: root.accent
-                        selectedTextColor: root.onAccent
-                        leftPadding: 14 * root.s
-                        rightPadding: 14 * root.s
-                        font { family: root.fontFamily; pixelSize: 18 * root.s; letterSpacing: password.text.length > 0 ? 3 * root.s : 0 }
-                        placeholderText: "Digite sua senha"
-                        placeholderTextColor: root.muted
-                        Accessible.name: "Senha"
-                        onAccepted: root.doLogin()
-                        background: Rectangle {
-                            radius: 6 * root.s
-                            color: root.field
-                            border.width: password.activeFocus ? 2 * root.s : 1 * root.s
-                            border.color: password.activeFocus ? root.accent : root.outline
-                        }
-                    }
-
-                    Button {
-                        id: loginButton
-                        width: 48 * root.s
-                        height: 48 * root.s
-                        padding: 0
-                        text: "Entrar"
-                        focusPolicy: Qt.StrongFocus
-                        Accessible.name: "Entrar"
-                        Keys.onReturnPressed: clicked()
-                        Keys.onEnterPressed: clicked()
-                        onClicked: root.doLogin()
-                        contentItem: Item {
-                            Image {
-                                anchors.centerIn: parent
-                                source: "Assets/icons/arrow-right.svg"
-                                sourceSize.width: 22 * root.s
-                                sourceSize.height: 22 * root.s
-                            }
-                        }
-                        background: Rectangle {
-                            radius: 6 * root.s
-                            color: loginButton.down ? Qt.darker(root.accent, 1.2)
-                                 : loginButton.hovered ? Qt.lighter(root.accent, 1.08)
-                                 : root.accent
-                            border.width: loginButton.visualFocus ? 2 * root.s : 0
-                            border.color: root.onSurface
-                        }
-                    }
-                }
-            }
-
-            // Caps Lock / erro
-            Rectangle {
-                width: parent.width
-                height: 34 * root.s
-                visible: keyboard.capsLock || errorText.text.length > 0
-                radius: 6 * root.s
-                color: Qt.rgba(255 / 255, 180 / 255, 171 / 255, 0.14)
-                Row {
-                    anchors { left: parent.left; leftMargin: 12 * root.s; verticalCenter: parent.verticalCenter }
-                    spacing: 8 * root.s
-                    Image {
-                        source: "Assets/icons/capslock.svg"
-                        sourceSize.width: 16 * root.s
-                        sourceSize.height: 16 * root.s
-                        visible: keyboard.capsLock && errorText.text.length === 0
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        id: errorText
-                        visible: text.length > 0
-                        color: root.error
-                        font { family: root.fontFamily; pixelSize: 13 * root.s }
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Text {
-                        visible: keyboard.capsLock && errorText.text.length === 0
-                        text: "Caps Lock ativado"
-                        color: root.error
-                        font { family: root.fontFamily; pixelSize: 13 * root.s }
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-            }
-
             // sessão + trocar usuário
             Row {
                 width: parent.width
@@ -342,6 +238,8 @@ Item {
                     currentIndex: sessionModel.lastIndex
                     focusPolicy: Qt.StrongFocus
                     Accessible.name: "Sessão"
+                    KeyNavigation.tab: userBox
+                    KeyNavigation.backtab: password
                     font { family: root.fontFamily; pixelSize: 14 * root.s }
 
                     contentItem: Row {
@@ -429,6 +327,8 @@ Item {
                     focusPolicy: Qt.StrongFocus
                     enabled: userModel.count > 1
                     Accessible.name: "Trocar usuário"
+                    KeyNavigation.tab: loginButton
+                    KeyNavigation.backtab: sessionBox
                     onActivated: password.forceActiveFocus()
 
                     contentItem: Item {
@@ -490,6 +390,116 @@ Item {
                 }
             }
 
+            // senha + entrar
+            Column {
+                width: parent.width
+                spacing: 10 * root.s
+
+                Text {
+                    text: "Senha"
+                    color: root.muted
+                    font { family: root.fontFamily; pixelSize: 13 * root.s }
+                }
+
+                Row {
+                    width: parent.width
+                    spacing: 8 * root.s
+
+                    TextField {
+                        id: password
+                        width: parent.width - loginButton.width - parent.spacing
+                        height: 48 * root.s
+                        focus: true
+                        activeFocusOnTab: true
+                        echoMode: TextInput.Password
+                        passwordCharacter: "•"
+                        color: root.onSurface
+                        selectionColor: root.accent
+                        selectedTextColor: root.onAccent
+                        leftPadding: 14 * root.s
+                        rightPadding: 14 * root.s
+                        font { family: root.fontFamily; pixelSize: 18 * root.s; letterSpacing: password.text.length > 0 ? 3 * root.s : 0 }
+                        placeholderText: "Digite sua senha"
+                        placeholderTextColor: root.muted
+                        Accessible.name: "Senha"
+                        onAccepted: root.doLogin()
+                        KeyNavigation.tab: sessionBox
+                        KeyNavigation.backtab: btnShutdown
+                        background: Rectangle {
+                            radius: 6 * root.s
+                            color: root.field
+                            border.width: password.activeFocus ? 2 * root.s : 1 * root.s
+                            border.color: password.activeFocus ? root.accent : root.outline
+                        }
+                    }
+
+                    Button {
+                        id: loginButton
+                        width: 48 * root.s
+                        height: 48 * root.s
+                        padding: 0
+                        text: "Entrar"
+                        focusPolicy: Qt.StrongFocus
+                        Accessible.name: "Entrar"
+                        Keys.onReturnPressed: clicked()
+                        Keys.onEnterPressed: clicked()
+                        onClicked: root.doLogin()
+                        KeyNavigation.tab: btnSuspend
+                        KeyNavigation.backtab: userBox
+                        contentItem: Item {
+                            Image {
+                                anchors.centerIn: parent
+                                source: "Assets/icons/arrow-right.svg"
+                                sourceSize.width: 22 * root.s
+                                sourceSize.height: 22 * root.s
+                            }
+                        }
+                        background: Rectangle {
+                            radius: 6 * root.s
+                            color: loginButton.down ? Qt.darker(root.accent, 1.2)
+                                 : loginButton.hovered ? Qt.lighter(root.accent, 1.08)
+                                 : root.accent
+                            border.width: loginButton.visualFocus ? 2 * root.s : 0
+                            border.color: root.onSurface
+                        }
+                    }
+                }
+            }
+
+            // Caps Lock / erro
+            Rectangle {
+                width: parent.width
+                height: 34 * root.s
+                visible: keyboard.capsLock || errorText.text.length > 0
+                radius: 6 * root.s
+                color: Qt.rgba(255 / 255, 180 / 255, 171 / 255, 0.14)
+                Row {
+                    anchors { left: parent.left; leftMargin: 12 * root.s; verticalCenter: parent.verticalCenter }
+                    spacing: 8 * root.s
+                    Image {
+                        source: "Assets/icons/capslock.svg"
+                        sourceSize.width: 16 * root.s
+                        sourceSize.height: 16 * root.s
+                        visible: keyboard.capsLock && errorText.text.length === 0
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        id: errorText
+                        visible: text.length > 0
+                        color: root.error
+                        font { family: root.fontFamily; pixelSize: 13 * root.s }
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        visible: keyboard.capsLock && errorText.text.length === 0
+                        text: "Caps Lock ativado"
+                        color: root.error
+                        font { family: root.fontFamily; pixelSize: 13 * root.s }
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+            }
+
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: "Tab alterna os campos · Enter entra"
@@ -505,7 +515,10 @@ Item {
         spacing: 10 * root.s
 
         IconButton {
+            id: btnSuspend
             s: root.s
+            KeyNavigation.tab: btnReboot
+            KeyNavigation.backtab: loginButton
             text: "Suspender"
             iconSource: Qt.resolvedUrl("Assets/icons/suspend.svg")
             focusColor: root.accent
@@ -513,7 +526,10 @@ Item {
             onClicked: sddm.suspend()
         }
         IconButton {
+            id: btnReboot
             s: root.s
+            KeyNavigation.tab: btnShutdown
+            KeyNavigation.backtab: btnSuspend
             text: "Reiniciar"
             iconSource: Qt.resolvedUrl("Assets/icons/reboot.svg")
             focusColor: root.accent
@@ -521,7 +537,10 @@ Item {
             onClicked: sddm.reboot()
         }
         IconButton {
+            id: btnShutdown
             s: root.s
+            KeyNavigation.tab: password
+            KeyNavigation.backtab: btnReboot
             text: "Desligar"
             iconSource: Qt.resolvedUrl("Assets/icons/shutdown.svg")
             focusColor: root.accent
