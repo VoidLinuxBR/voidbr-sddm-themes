@@ -18,6 +18,8 @@ depends=(
 	qt5-quickcontrols2
 	qt5-wayland
 	qt6-wayland
+	weston             # compositor do greeter em modo Wayland (DisplayServer=wayland)
+	adwaita-icon-theme # cursor do greeter (etc/sddm.conf.d/cursor.conf: CursorTheme=Adwaita)
 )
 backup=(
 	/etc/sddm.conf
