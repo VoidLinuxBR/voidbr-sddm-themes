@@ -2,7 +2,7 @@
 #
 #   voidbr_sddm_aba.py
 #   Created: seg 23 nov 2026 01:40:00 -04
-#   Updated: seg 23 nov 2026 01:40:00 -04
+#   Updated: seg 23 nov 2026 01:55:22 -04
 #
 #   Copyright (c) 2026, Vilmar Catafesta <vcatafesta@gmail.com>
 #   Copyright (c) 2026, VoidLinuxBR Team
@@ -14,6 +14,10 @@
 #     pelos voidbr-*-tweaks (sway, labwc, xfce, gnome, enlightenment): temas
 #     do SDDM com prévia, Testar (sddm-greeter --test-mode), fundo próprio e
 #     Aplicar pelo pkexec voidbr-sddm-theme.
+#   - v1.1 (2026-11-23): Um Aplicar só: nos tweaks com "✅ Aplicar" geral
+#     (criar_aba(janela, com_botao=False)) é ele que troca a tela de login;
+#     antes a aba tinha um botão próprio no fim da página e o Aplicar geral
+#     dizia "Nada mudou". pendente() / aplicar() / ocupado para o app usar.
 #
 #   Licença BSD (a mesma dos voidbr-*-tweaks).
 ##############################################################################
@@ -23,12 +27,15 @@ Aba "Tela de login" dos VoidBR Tweaks.
 Uso no app (GTK4):
     sys.path.insert(0, "/usr/lib/voidbr")
     import voidbr_sddm_aba
-    pagina = voidbr_sddm_aba.criar_aba(janela)   # Gtk.Widget
+    aba = voidbr_sddm_aba.criar_aba(janela, com_botao=False)   # Gtk.Widget
+
+    com_botao=False: o app tem um "Aplicar" geral; no clique dele, chame
+        if aba.pendente(): aba.aplicar()
+    e não mostre "Nada mudou" enquanto aba.ocupado for True.
+    com_botao=True (padrão): a aba tem o próprio botão Aplicar.
 
 A troca de tema é do sistema (afeta todos os usuários), por isso vai pelo
 "pkexec voidbr-sddm-theme aplicar", que pede a senha de administrador.
-A aba tem os próprios botões e a própria linha de status: o "Aplicar" do app
-não mexe nela.
 """
 
 import os
@@ -42,7 +49,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk, GLib, Gio  # noqa: E402
 
-VERSAO = "1.0"
+VERSAO = "1.1"
 AJUDANTE = "/usr/bin/voidbr-sddm-theme"
 PAPEL_EXT = (".avif", ".jpg", ".jpeg", ".png", ".webp", ".svg")
 
@@ -95,9 +102,11 @@ def papel_sugerido():
 
 
 class AbaLogin(Gtk.Box):
-    def __init__(self, janela):
+    def __init__(self, janela, com_botao=True):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.janela = janela
+        self.com_botao = com_botao
+        self.ocupado = False
         for lado in ("top", "bottom", "start", "end"):
             getattr(self, f"set_margin_{lado}")(14)
         prov = Gtk.CssProvider()
@@ -153,11 +162,13 @@ class AbaLogin(Gtk.Box):
                                                 "Feche a janela para voltar.")
         self.b_testar.add_css_class("botao-azul")
         self.b_testar.connect("clicked", lambda *_: self._testar())
-        self.b_aplicar = Gtk.Button(label="🔐 Aplicar na tela de login")
-        self.b_aplicar.add_css_class("botao-verde")
-        self.b_aplicar.connect("clicked", lambda *_: self._aplicar())
         botoes.append(self.b_testar)
-        botoes.append(self.b_aplicar)
+        self.b_aplicar = None
+        if com_botao:
+            self.b_aplicar = Gtk.Button(label="🔐 Aplicar na tela de login")
+            self.b_aplicar.add_css_class("botao-verde")
+            self.b_aplicar.connect("clicked", lambda *_: self.aplicar())
+            botoes.append(self.b_aplicar)
         self.append(botoes)
 
         self.recarregar()
@@ -198,8 +209,24 @@ class AbaLogin(Gtk.Box):
             self.grade.append(self._cartao(nome, titulo, previa, nome == self.atual))
             if nome == self.atual:
                 self.grade.select_child(self.grade.get_child_at_index(i))
+        # fundo próprio já aplicado neste tema? (theme.conf.user do voidbr-sddm-theme)
+        self.papel_inicial = ""
+        if self.atual:
+            dir_tema = f"/usr/share/sddm/themes/{self.atual}"
+            try:
+                with open(f"{dir_tema}/theme.conf.user", encoding="utf-8") as f:
+                    if f.readline().startswith("# voidbr-sddm-theme"):
+                        for arq in os.listdir(dir_tema):
+                            if arq.startswith("voidbr-papel."):
+                                self.papel_inicial = f"{dir_tema}/{arq}"
+            except OSError:
+                pass
+        if self.papel_inicial:
+            self.papel = self.papel_inicial
+        self.w_papel.set_active(bool(self.papel_inicial))
         self._atualizar_papel()
-        self.status(f"✔ Tema atual: {self.atual or 'padrão do SDDM'}.")
+        dica = "" if self.com_botao else " Escolha outro e use o ✅ Aplicar lá embaixo."
+        self.status(f"✔ Tema atual: {self.atual or 'padrão do SDDM'}.{dica}")
 
     def escolhido(self):
         sel = self.grade.get_selected_children()
@@ -211,7 +238,8 @@ class AbaLogin(Gtk.Box):
         t = self.escolhido()
         if t:
             extra = "" if t[0] != self.atual else " (é o que está em uso)"
-            self.status(f"Escolhido: {t[1]}{extra}. Testar mostra antes; Aplicar troca.")
+            onde = "Aplicar troca" if self.com_botao else "o ✅ Aplicar lá embaixo troca"
+            self.status(f"Escolhido: {t[1]}{extra}. Testar mostra antes; {onde}.")
 
     # ----- fundo -----
 
@@ -258,7 +286,18 @@ class AbaLogin(Gtk.Box):
 
     def _botoes(self, ligados):
         self.b_testar.set_sensitive(ligados)
-        self.b_aplicar.set_sensitive(ligados)
+        if self.b_aplicar is not None:
+            self.b_aplicar.set_sensitive(ligados)
+
+    def pendente(self):
+        """True se a tela mostra algo diferente do que está aplicado."""
+        t = self.escolhido()
+        if not t or not os.access(AJUDANTE, os.X_OK):
+            return False
+        ligado = self.w_papel.get_active()
+        if t[0] != self.atual or ligado != bool(self.papel_inicial):
+            return True
+        return ligado and self.papel != self.papel_inicial
 
     def _testar(self):
         t = self.escolhido()
@@ -277,7 +316,14 @@ class AbaLogin(Gtk.Box):
         except OSError as e:
             self.status(f"⚠️ {e}")
 
-    def _aplicar(self):
+    def _avisar(self, texto):
+        """Status na aba e, sem botão próprio, também na linha do app."""
+        self.status(texto)
+        if not self.com_botao and hasattr(self.janela, "status"):
+            self.janela.status(texto)
+        return False
+
+    def aplicar(self):
         t = self.escolhido()
         if not t:
             self.status("ℹ️ Escolha um tema primeiro.")
@@ -285,13 +331,14 @@ class AbaLogin(Gtk.Box):
         cmd = ["pkexec", AJUDANTE, "aplicar", t[0]]
         if self.w_papel.get_active():
             if not self.papel:
-                self.status("ℹ️ Escolha a imagem do fundo (ou desligue a opção).")
+                self._avisar("ℹ️ Tela de login: escolha a imagem do fundo (ou desligue a opção).")
                 return
             cmd += ["--papel", self.papel]
         else:
             cmd += ["--sem-papel"]
         self._botoes(False)
-        self.status("🔐 Esperando a senha de administrador…")
+        self.ocupado = True
+        self._avisar("🔐 Tela de login: esperando a senha de administrador…")
 
         def tarefa():
             try:
@@ -306,14 +353,15 @@ class AbaLogin(Gtk.Box):
 
     def _fim(self, ok, t, msg):
         self._botoes(True)
+        self.ocupado = False
         if ok:
             self.recarregar()
-            self.status(f"✅ Tela de login: {t[1]}. Aparece no próximo login ou ao reiniciar.")
+            self._avisar(f"✅ Tela de login: {t[1]}. Aparece no próximo login ou ao reiniciar.")
         else:
             limpo = re.sub(r"\x1b\[[0-9;]*m", "", msg) or "erro desconhecido"
-            self.status(f"⚠️ Não trocou: {limpo}")
+            self._avisar(f"⚠️ Tela de login não trocou: {limpo}")
         return False
 
 
-def criar_aba(janela):
-    return AbaLogin(janela)
+def criar_aba(janela, com_botao=True):
+    return AbaLogin(janela, com_botao)
