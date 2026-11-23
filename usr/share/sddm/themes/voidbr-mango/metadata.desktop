@@ -1,0 +1,12 @@
+[SddmGreeterTheme]
+Name=VoidBR Mango
+Description=Tema SDDM da edição VoidBR Mango (código do tema voidbr, cores e fundo do Mango)
+Author=Vilmar Catafesta, Wilton (Wiljapa)
+Copyright=(c)
+License=MIT
+Type=greeter
+Version=1.0
+MainScript=Main.qml
+ConfigFile=theme.conf
+Theme-Id=voidbr-mango
+Theme-API=2.0

@@ -1,0 +1,1 @@
+../voidbr/Globals.qml
