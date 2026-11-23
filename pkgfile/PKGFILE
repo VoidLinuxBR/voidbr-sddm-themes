@@ -33,7 +33,6 @@ backup=(
 	/etc/sddm.conf.d/cursor.conf
 	/etc/sddm.conf.d/numlock.conf
 	/etc/sddm.conf.d/wayland.conf
-	/etc/sddm/sway-greeter.conf
 )
 
 package() {
