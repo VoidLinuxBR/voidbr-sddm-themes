@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# ====================================================================
+# VoidBR - Tema da tela de login (SDDM)
+# Lista os temas instalados, mostra o atual e troca o tema (como root,
+# pelo pkexec). Usado pela aba "Tela de login" dos voidbr-*-tweaks.
+# Created: seg 23 nov 2026 01:40:00 -04
+# Updated: seg 23 nov 2026 01:40:00 -04
+# Version: 1.0.0
+# ====================================================================
+#
+# Uso:
+#   voidbr-sddm-theme listar               nome|título|prévia|qt (um por linha)
+#   voidbr-sddm-theme atual                tema em uso
+#   voidbr-sddm-theme aplicar <tema> [--papel <imagem> | --sem-papel]
+#                                          troca o tema (precisa de root:
+#                                          pkexec voidbr-sddm-theme aplicar …)
+#
+# O que "aplicar" grava (e só isso):
+#   /etc/sddm.conf.d/50-voidbr-theme.conf   [Theme] Current=<tema>
+#   /etc/sddm.conf                          comenta o "Current=" antigo, que
+#                                           valeria por cima (é lido por último)
+#   <tema>/theme.conf.user + voidbr-papel.* só com --papel (fundo próprio)
+
+set -u
+
+temas_dir="/usr/share/sddm/themes"
+conf_d="/etc/sddm.conf.d"
+conf_tema="$conf_d/50-voidbr-theme.conf"
+conf_velho="/etc/sddm.conf"
+marca="# voidbr-sddm-theme"
+
+red=$'\e[31m'
+green=$'\e[32m'
+reset=$'\e[0m'
+# sem terminal (chamado pelo app): sem cores
+[ -t 1 ] && [ -t 2 ] || { red=''; green=''; reset=''; }
+
+erro() {
+	echo "${red}erro:${reset} $*" >&2
+	exit 1
+}
+
+# valor de uma chave num .desktop/.conf (primeira ocorrência)
+valor() {
+	sed -n "s/^$2=//p" "$1" 2>/dev/null | head -n1 | tr -d '"'
+}
+
+tema_valido() {
+	[[ "$1" =~ ^[A-Za-z0-9._-]+$ ]] && [[ "$1" != .* ]] && [ -f "$temas_dir/$1/metadata.desktop" ]
+}
+
+listar() {
+	local d nome titulo shot qt
+	for d in "$temas_dir"/*/; do
+		nome=$(basename "$d")
+		[ -f "$d/metadata.desktop" ] || continue
+		titulo=$(valor "$d/metadata.desktop" Name)
+		shot=$(valor "$d/metadata.desktop" Screenshot)
+		[ -z "$shot" ] && shot=$(valor "$d/metadata.desktop" ScreenShot)
+		[ -n "$shot" ] && [ -f "$d/$shot" ] && shot="$d$shot" || shot=""
+		qt=$(valor "$d/metadata.desktop" QtVersion)
+		echo "$nome|${titulo:-$nome}|$shot|${qt:-5}"
+	done
+}
+
+# tema em uso, na ordem em que o SDDM lê: sddm.conf.d (alfabética) e
+# por último o /etc/sddm.conf — o último "Current=" vale
+atual() {
+	local f atual=""
+	for f in /usr/lib/sddm/sddm.conf.d/*.conf "$conf_d"/*.conf "$conf_velho"; do
+		[ -f "$f" ] || continue
+		v=$(sed -n '/^\[Theme\]/,/^\[/{s/^Current=//p}' "$f" | tail -n1)
+		[ -n "$v" ] && atual="$v"
+	done
+	echo "$atual"
+}
+
+# chave do fundo no theme.conf (cada tema usa um nome)
+chave_fundo() {
+	grep -m1 -o -E '^(background|Background|wallpaper)=' "$1/theme.conf" 2>/dev/null | tr -d '='
+}
+
+sem_papel() {
+	local dir="$temas_dir/$1"
+	if [ -f "$dir/theme.conf.user" ] && grep -q "^$marca" "$dir/theme.conf.user"; then
+		rm -f "$dir/theme.conf.user"
+	fi
+	rm -f "$dir"/voidbr-papel.*
+}
+
+papel() {
+	local tema="$1" img="$2" dir="$temas_dir/$1" chave tmp tipo ext
+	chave=$(chave_fundo "$dir")
+	[ -n "$chave" ] || erro "o tema $tema não tem fundo configurável"
+	[ -f "$img" ] || erro "imagem não encontrada: $img"
+	tmp=$(mktemp) || erro "sem espaço em /tmp"
+	# lê a imagem com as permissões de quem pediu, não como root:
+	# ninguém copia para a tela de login um arquivo que não poderia abrir
+	if [ -n "${PKEXEC_UID:-}" ]; then
+		setpriv --reuid="$PKEXEC_UID" --regid="$(id -g "$PKEXEC_UID")" --clear-groups \
+			cat -- "$img" >"$tmp" || { rm -f "$tmp"; erro "sem permissão para ler $img"; }
+	else
+		cat -- "$img" >"$tmp" || { rm -f "$tmp"; erro "sem permissão para ler $img"; }
+	fi
+	tipo=$(file -b --mime-type "$tmp")
+	case "$tipo" in
+	image/jpeg) ext=jpg ;;
+	image/png) ext=png ;;
+	image/webp) ext=webp ;;
+	image/avif) ext=avif ;;
+	image/svg+xml) ext=svg ;;
+	*)
+		rm -f "$tmp"
+		erro "não é uma imagem que o SDDM abra ($tipo)"
+		;;
+	esac
+	sem_papel "$tema"
+	install -m644 "$tmp" "$dir/voidbr-papel.$ext"
+	rm -f "$tmp"
+	printf '%s (gerado; apague para voltar ao fundo do tema)\n[General]\n%s=voidbr-papel.%s\n' \
+		"$marca" "$chave" "$ext" >"$dir/theme.conf.user"
+	chmod 644 "$dir/theme.conf.user"
+}
+
+aplicar() {
+	local tema="${1:-}"
+	shift || true
+	[ "$(id -u)" -eq 0 ] || erro "precisa de root (use: pkexec $0 aplicar $tema)"
+	tema_valido "$tema" || erro "tema inválido: $tema"
+
+	# primeiro o fundo: se a imagem falhar, nada muda
+	case "${1:-}" in
+	--papel) papel "$tema" "${2:-}" ;;
+	--sem-papel) sem_papel "$tema" ;;
+	esac
+
+	mkdir -p "$conf_d"
+	printf '%s: tema da tela de login (escolhido no VoidBR Tweaks)\n[Theme]\nCurrent=%s\n' \
+		"$marca" "$tema" >"$conf_tema"
+	chmod 644 "$conf_tema"
+
+	# o /etc/sddm.conf é lido por último: um Current= nele ganharia de tudo
+	if [ -f "$conf_velho" ] && sed -n '/^\[Theme\]/,/^\[/p' "$conf_velho" | grep -q '^Current='; then
+		sed -i '/^\[Theme\]/,/^\[/ s/^Current=/#Current=/' "$conf_velho"
+	fi
+
+	echo "${green}tema da tela de login: $tema${reset} (vale no próximo login)"
+}
+
+case "${1:-}" in
+listar) listar ;;
+atual) atual ;;
+aplicar)
+	shift
+	aplicar "$@"
+	;;
+*)
+	sed -n '/^# Uso:/,/^# O que/p' "$0" | sed '$d; s/^# \{0,1\}//'
+	exit 1
+	;;
+esac

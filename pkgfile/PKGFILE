@@ -22,10 +22,14 @@ depends=(
 	qt6-svg            # ícones SVG do tema voidbr-modern
 	sway               # compositor do greeter em modo Wayland (etc/sddm/sway-greeter.conf; substitui o weston)
 	adwaita-icon-theme # cursor do greeter (etc/sddm.conf.d/cursor.conf: CursorTheme=Adwaita)
+	polkit             # pkexec do voidbr-sddm-theme (aba "Tela de login" dos tweaks)
+	file               # voidbr-sddm-theme: confere se o fundo escolhido é imagem
+	util-linux         # voidbr-sddm-theme: setpriv (lê a imagem como o usuário)
 )
 backup=(
 	/etc/sddm.conf
 	/etc/sddm.conf.d/00-autologin
+	/etc/sddm.conf.d/10-theme.conf
 	/etc/sddm.conf.d/cursor.conf
 	/etc/sddm.conf.d/numlock.conf
 	/etc/sddm.conf.d/wayland.conf
